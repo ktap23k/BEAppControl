@@ -163,4 +163,4 @@ class ControlFrame(tk.Frame):
             if self.hand_app.ws:
                 self.hand_app.ws.on_message_data['status'] = 1
                 if self.change(text):
-                    self.hand_app.ws.send_message(text)
+                    self.hand_app.ws.send_message(self.change(text))

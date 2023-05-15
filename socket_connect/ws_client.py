@@ -34,6 +34,7 @@ class WebSocket:
         print("WebSocket connection opened.")
 
     def on_message(self, ws, message):
+        print(message)
         if self.on_message_data['status']:
             self.on_message_data['status'] = 0
             self.on_message_data['message'] = [message]
