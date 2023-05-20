@@ -3,7 +3,7 @@ import threading
 import json
 
 class WebSocket:
-    def __init__(self, id: int):
+    def __init__(self, id: int, control_frame = None):
         self.url = f'ws://14.225.254.142:2024/{id}'
         self.connect = 0
         self.ws = None
@@ -12,6 +12,7 @@ class WebSocket:
             'status': 0,
             'message': []
         }
+        self.control_frame = control_frame
         self.start()
 
     def start(self):
@@ -34,12 +35,7 @@ class WebSocket:
         print("WebSocket connection opened.")
 
     def on_message(self, ws, message):
-        print(message)
-        if self.on_message_data['status']:
-            self.on_message_data['status'] = 0
-            self.on_message_data['message'] = [message]
-        else:
-            self.on_message_data['message'].append(message)
+        self.control_frame.control_barrier(message)
 
     def on_close(self, ws):
         self.connect = 0

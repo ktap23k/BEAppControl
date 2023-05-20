@@ -4,10 +4,19 @@ from frame_layout.control_frame import ControlFrame
 from frame_layout.hand_frame import HandGestureWidget
 import logging
 logger = logging.getLogger(__name__)
+import sys
+
 
 class HandApp:
+    def on_close(self):
+        if self.ws:
+            self.ws.stop()
+        sys.exit()
+
     def __init__(self):
         self.root = tk.Tk()
+        self.root.title("Hand Control")
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.resizable(False, False)
         
         self.ws = None

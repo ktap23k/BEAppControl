@@ -2,7 +2,7 @@ import tkinter as tk
 from socket_connect import ws_client
 import logging
 logger = logging.getLogger(__name__)
-
+import json
 
 
 class ControlFrame(tk.Frame):
@@ -33,8 +33,19 @@ class ControlFrame(tk.Frame):
                                 highlightthickness=3,
                                 highlightbackground="#03fce8",
                             )
-        self.frame_button.pack(padx=20, pady=10, expand=True, fill="both")
+        self.frame_button.pack(padx=10, pady=5)
         self.create_frame_ws()
+        
+        self.frame_barrier = tk.Frame(self,
+                                borderwidth=1, 
+                                relief='solid',
+                                highlightthickness=3,
+                                highlightbackground="#03fce8",
+                                width=400, height=150,
+                            )
+        self.frame_barrier.pack(padx=20, pady=10, expand=True, fill="both")
+        self.create_frame_label()
+        
         self.frame_control_car = tk.Frame(
                                 self,
                                 borderwidth=1, 
@@ -104,6 +115,29 @@ class ControlFrame(tk.Frame):
         center_button = tk.Button(center_frame, text="Stop", command=self.stop)
         center_button.pack(fill="both", expand=True)
     
+    def create_frame_label(self):
+        east_frame = tk.Frame(self.frame_barrier)
+        west_frame = tk.Frame(self.frame_barrier)
+        south_frame = tk.Frame(self.frame_barrier)
+        north_frame = tk.Frame(self.frame_barrier)
+        
+        east_frame.pack(side="right", fill="y")
+        west_frame.pack(side="left", fill="y")
+        south_frame.pack(side="bottom", fill="both", expand=True)
+        north_frame.pack(side="top", fill="both", expand=True)
+        
+        self.ahead = tk.Label(north_frame, text="Distance ahead: ", bg="lightblue", fg="white")
+        self.ahead.pack(side="top", fill="both", expand=True)
+
+        self.right = tk.Label(east_frame, text="Distance right: ", bg="lightgreen", fg="black")
+        self.right.pack(side="right", fill="both", expand=True)
+
+        self.behind = tk.Label(south_frame, text="Distance behind: ", bg="lightyellow", fg="black")
+        self.behind.pack(side="bottom", fill="both", expand=True)
+
+        self.left = tk.Label(west_frame, text="Distance left: ", bg="lightpink", fg="white")
+        self.left.pack(side="left", fill="both", expand=True)
+    
     def change(self, text):
         data = {
             'like' : 'forward', 
@@ -128,33 +162,104 @@ class ControlFrame(tk.Frame):
         return data.get(text)
     
     def move_forward(self):
-        self.toggle_gesture('like', 100)
+        if not self.hand_app.ws:
+            self.show_dialog("Disconnected! Please connect by id!", "Information")
+        else:
+            self.toggle_gesture('like', 100)
 
     def move_backward(self):
-        self.toggle_gesture('dislike', 100)
+        if not self.hand_app.ws:
+            self.show_dialog("Disconnected! Please connect by id!", "Information")
+        else:
+            self.toggle_gesture('dislike', 100)
 
     def turn_left(self):
-        self.toggle_gesture('one', 100)
+        if not self.hand_app.ws:
+            self.show_dialog("Disconnected! Please connect by id!", "Information")
+        else:
+            self.toggle_gesture('one', 100)
 
     def turn_right(self):
-        self.toggle_gesture('peace', 100)
+        if not self.hand_app.ws:
+            self.show_dialog("Disconnected! Please connect by id!", "Information")
+        else:
+            self.toggle_gesture('peace', 100)
 
     def stop(self):
-        self.toggle_gesture('stop', 100)
+        if not self.hand_app.ws:
+            self.show_dialog("Disconnected! Please connect by id!", "Information")
+        else:
+            self.toggle_gesture('stop', 100)
     
     def disconnect_gesture(self):
         if self.hand_app.ws:
             self.hand_app.ws.stop()
             self.status_ws_label.config(text='Disconnected', fg='red')
-            
+            self.hand_app.ws = None
+    
+    def control_barrier(self, data):
+        data_dict = json.loads(data)
+        data_string = data_dict['data']
+        data_list = [float(x) for x in data_string.split()]
         
+        try:
+            behind = data_list[0] if data_list[0] > 0 else 400
+            right = data_list[1] if data_list[1] > 0 else 400
+            ahead = data_list[2] if data_list[2] > 0 else 400
+            left = data_list[3] if data_list[3] > 0 else 400
+            
+            self.ahead.config(text=f'ahead: {ahead:.1f}cm', bg="lightblue", fg="white")
+            self.right.config(text=f'right: {right:.1f}cm', bg="lightgreen", fg="black")
+            self.behind.config(text=f'behind: {behind:.1f}cm', bg="lightyellow", fg="black")
+            self.left.config(text=f'left: {left:.1f}cm', bg="lightpink", fg="white")
+            
+            if ahead < 10:
+                self.ahead.config(text=f'ahead: {ahead:.1f}cm', bg="red", fg="yellow")
+            elif ahead < 20:
+                self.ahead.config(text=f'ahead: {ahead:.1f}cm', bg="yellow", fg="black")
+                
+            if right < 10:
+                self.right.config(text=f'right: {right:.1f}cm', bg="red", fg="yellow")
+            elif right < 20:
+                self.right.config(text=f'right: {right:.1f}cm', bg="yellow", fg="black")
+                
+            if behind < 10:
+                self.behind.config(text=f'behind: {behind:.1f}cm', bg="red", fg="yellow")
+            elif behind < 20:
+                self.behind.config(text=f'behind: {behind:.1f}cm', bg="yellow", fg="black")
+                
+            if left < 10:
+                self.left.config(text=f'left: {left:.1f}cm', bg="red", fg="yellow")
+            elif left < 20:
+                self.left.config(text=f'left: {left:.1f}cm', bg="yellow", fg="black")
+        
+        except Exception as e:
+            pass
+    
+    def show_dialog(self, text, title):
+        dialog = tk.Toplevel()
+        dialog.geometry("400x300")
+        dialog.title(title)
+        
+        label = tk.Label(dialog, text=text)
+        label.pack()
+        
+        button = tk.Button(dialog, text="OK", command=dialog.destroy)
+        button.pack()
+    
     def toggle_gesture(self, text='', percent=0):
         if not text:
-            id = int(self.input_wsid.get())
-            self.hand_app.ws = ws_client.WebSocket(id)
-            if self.hand_app.ws:
-                self.status_label.config(text='Connect Success!')
-                self.status_ws_label.config(text='Connect Success!', fg='green')
+            try:
+                id = int(self.input_wsid.get())
+                if self.hand_app.ws:
+                    self.show_dialog("Already connected!", "Information")
+
+                self.hand_app.ws = ws_client.WebSocket(id, self)
+                if self.hand_app.ws:
+                    self.status_label.config(text='Connect Success!')
+                    self.status_ws_label.config(text='Connect Success!', fg='green')
+            except Exception as e:
+                self.show_dialog(str(e), "Error")
         else:
             if self.change(text):
                 self.status_label.config(text=f'{self.change(text)} {percent}%')
