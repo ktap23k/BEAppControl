@@ -1,82 +1,52 @@
 import cv2
-import mediapipe as mp
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_hands = mp.solutions.hands
+import tkinter as tk
+from PIL import Image, ImageTk
 
-# For webcam input:
-cap = cv2.VideoCapture(0)
-with mp_hands.Hands(
-    model_complexity=0,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as hands:
-  while cap.isOpened():
-    success, image = cap.read()
-    if not success:
-      print("Ignoring empty camera frame.")
-      # If loading a video, use 'break' instead of 'continue'.
-      continue
+# Tạo cửa sổ tkinter
+window = tk.Tk()
+window.title("Webcam View")
 
-    # To improve performance, optionally mark the image as not writeable to
-    # pass by reference.
-    image.flags.writeable = False
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = hands.process(image)
+# Tạo một frame để hiển thị hình ảnh
+frame = tk.Frame(window)
+frame.pack()
 
-    # Draw the hand annotations on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+# Tạo một thành phần Label để hiển thị hình ảnh
+image_label = tk.Label(frame)
+image_label.pack()
 
-    # Initially set finger count to 0 for each cap
-    fingerCount = 0
+# Hàm cập nhật hình ảnh từ webcam
+def update_frame():
+    # Đọc frame từ webcam
+    ret, frame = cap.read()
 
-    if results.multi_hand_landmarks:
+    if ret:
+        # Chuyển đổi frame thành đối tượng hình ảnh của Pillow
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-      for hand_landmarks in results.multi_hand_landmarks:
-        # Get hand index to check label (left or right)
-        handIndex = results.multi_hand_landmarks.index(hand_landmarks)
-        handLabel = results.multi_handedness[handIndex].classification[0].label
+        # Chuyển đổi đối tượng hình ảnh thành đối tượng hình ảnh tkinter
+        photo = ImageTk.PhotoImage(image)
 
-        # Set variable to keep landmarks positions (x and y)
-        handLandmarks = []
+        # Cập nhật hình ảnh trên label
+        image_label.configure(image=photo)
+        image_label.image = photo
 
-        # Fill list with x and y positions of each landmark
-        for landmarks in hand_landmarks.landmark:
-          handLandmarks.append([landmarks.x, landmarks.y])
+    # Lặp lại việc cập nhật hình ảnh sau một khoảng thời gian
+    image_label.after(10, update_frame)
 
-        # Test conditions for each finger: Count is increased if finger is 
-        #   considered raised.
-        # Thumb: TIP x position must be greater or lower than IP x position, 
-        #   deppeding on hand label.
-        if handLabel == "Left" and handLandmarks[4][0] > handLandmarks[3][0]:
-          fingerCount = fingerCount+1
-        elif handLabel == "Right" and handLandmarks[4][0] < handLandmarks[3][0]:
-          fingerCount = fingerCount+1
+# Mở webcam
+cap = cv2.VideoCapture("http://192.168.0.102/live")
 
-        # Other fingers: TIP y position must be lower than PIP y position, 
-        #   as image origin is in the upper left corner.
-        if handLandmarks[8][1] < handLandmarks[6][1]:       #Index finger
-          fingerCount = fingerCount+1
-        if handLandmarks[12][1] < handLandmarks[10][1]:     #Middle finger
-          fingerCount = fingerCount+1
-        if handLandmarks[16][1] < handLandmarks[14][1]:     #Ring finger
-          fingerCount = fingerCount+1
-        if handLandmarks[20][1] < handLandmarks[18][1]:     #Pinky
-          fingerCount = fingerCount+1
+# Kiểm tra xem webcam đã được mở hay chưa
+if not cap.isOpened():
+    print("Không thể mở webcam")
+    exit()
 
-        # Draw hand landmarks 
-        mp_drawing.draw_landmarks(
-            image,
-            hand_landmarks,
-            mp_hands.HAND_CONNECTIONS,
-            mp_drawing_styles.get_default_hand_landmarks_style(),
-            mp_drawing_styles.get_default_hand_connections_style())
+# Gọi hàm cập nhật hình ảnh ban đầu
+update_frame()
 
-    # Display finger count
-    cv2.putText(image, str(fingerCount), (50, 450), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 10)
+# Bắt đầu vòng lặp chính của tkinter
+window.mainloop()
 
-    # Display image
-    cv2.imshow('MediaPipe Hands', image)
-    if cv2.waitKey(5) & 0xFF == 27:
-      break
+# Khi kết thúc chương trình, giải phóng tài nguyên
 cap.release()
+cv2.destroyAllWindows()

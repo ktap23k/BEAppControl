@@ -4,6 +4,7 @@ import mediapipe as mp
 from PIL import Image, ImageTk
 from hand_controler.hand_model import HandModel
 import logging
+import _thread
 logger = logging.getLogger(__name__)
 
 class HandGestureWidget(tk.Frame):
@@ -18,6 +19,16 @@ class HandGestureWidget(tk.Frame):
         self.capture = capture
         self.canvas = tk.Canvas(self, width=1020, height=720)
         self.canvas.pack()
+        # Add the square overlay
+        self.overlay_frame = tk.Frame(self.canvas, width=200, height=200)
+        self.overlay_frame.place(x=700, y=500)
+        
+        # Add the video frame
+        self.video_frame = tk.Label(self.overlay_frame)
+        self.video_frame.pack()
+        self.cap_esp = None
+        self.url_camesp = 'http://192.168.0.104/live'
+
         self.pack()
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_hands = mp.solutions.hands
@@ -26,6 +37,49 @@ class HandGestureWidget(tk.Frame):
             max_num_hands=1,
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5)
+        
+        self.check_esp32 = True
+        _thread.start_new_thread(self.create_video, ())
+        
+    def create_video(self):
+        while self.check_esp32:
+            try:
+                if not self.cap_esp:
+                    self.cap_esp = cv2.VideoCapture(self.url_camesp)
+                    print(12345)
+                    if not self.cap_esp.isOpened() and self.check_esp32:
+                        self.check_esp32 = False
+                        self.video_frame.config(text="No ESP32 Cam!", background='white')
+                        self.end_thread_esp()
+
+                elif self.video_frame.cget("text") == "No ESP32 Cam!" and self.cap_esp:
+                        self.end_thread_esp()
+                        
+            except:
+                self.video_frame.config(text="No ESP32 Cam!", background='white')
+            
+            if self.cap_esp:
+                ret, frame = self.cap_esp.read()
+            
+            # if not self.cap_esp.isOpened() and self.check_esp32:
+            #     self.check_esp32 = False
+            #     self.video_frame.config(text="No ESP32 Cam!", background='white')
+            #     print('No cam')
+                
+                if ret:
+                    # Chuyển đổi frame thành đối tượng hình ảnh của Pillow
+                    image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+                    # Chuyển đổi đối tượng hình ảnh thành đối tượng hình ảnh tkinter
+                    photo = ImageTk.PhotoImage(image)
+
+                    # Cập nhật hình ảnh trên label
+                    self.video_frame.configure(image=photo)
+                    self.video_frame.image = photo
+                
+            # if self.check_esp32:
+                # self.after(10, self.create_video)
+        print('Finish Thread!')
         
     def handle_rectangle(self, hand_landmarks, width, height):
         # Get bounding box coordinates
@@ -40,7 +94,18 @@ class HandGestureWidget(tk.Frame):
         y_max += int((y_max - y_min) * 0.15)
         return (x_min, y_min, x_max, y_max)
     
-    def update(self):
+    def start_thread_esp(self):
+        self.check_esp32 = True
+        self.video_frame.config(text="")
+        print(self.url_camesp)
+        _thread.start_new_thread(self.create_video, ())
+        
+    def end_thread_esp(self):
+        self.check_esp32 = False
+        self.cap_esp = None
+        print('Delete esp32 cam')
+    
+    def update(self):    
         ret, frame = self.capture.read()
         if ret:
             frame = cv2.flip(frame, 1)

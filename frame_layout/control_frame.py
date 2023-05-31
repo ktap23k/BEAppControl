@@ -200,13 +200,24 @@ class ControlFrame(tk.Frame):
     def control_barrier(self, data):
         data_dict = json.loads(data)
         data_string = data_dict['data']
+        
+        if 'url' in data_string:
+            data_string = data_string.replace("'", '"')
+            data_string = json.loads(data_string)
+            
+            if not self.hand_app.hand_gesture.cap_esp:
+                self.hand_app.hand_gesture.url_camesp = data_string['url']
+                self.hand_app.hand_gesture.start_thread_esp()
+                return
+            
+        self.status_ws_label.config(text='Connect ESP32 Success!', fg='green')
         data_list = [float(x) for x in data_string.split()]
         
         try:
-            behind = data_list[0] if data_list[0] > 0 else 400
-            right = data_list[1] if data_list[1] > 0 else 400
-            ahead = data_list[2] if data_list[2] > 0 else 400
-            left = data_list[3] if data_list[3] > 0 else 400
+            behind = data_list[0] if data_list[0] > 2 else 400
+            right = data_list[1] if data_list[1] > 2 else 400
+            ahead = data_list[2] if data_list[2] > 2 else 400
+            left = data_list[3] if data_list[3] > 2 else 400
             
             self.ahead.config(text=f'ahead: {ahead:.1f}cm', bg="lightblue", fg="white")
             self.right.config(text=f'right: {right:.1f}cm', bg="lightgreen", fg="black")
@@ -257,7 +268,7 @@ class ControlFrame(tk.Frame):
                 self.hand_app.ws = ws_client.WebSocket(id, self)
                 if self.hand_app.ws:
                     self.status_label.config(text='Connect Success!')
-                    self.status_ws_label.config(text='Connect Success!', fg='green')
+                    self.status_ws_label.config(text='Connect Websocket Success!', fg='green')
             except Exception as e:
                 self.show_dialog(str(e), "Error")
         else:
