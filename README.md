@@ -12,4 +12,6 @@ Requires python 3.6 or higher
 ### create venv
 - Install python
 - Install lib in requirements.txt
-- 
+
+### run
+python main.py
