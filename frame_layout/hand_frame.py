@@ -20,14 +20,14 @@ class HandGestureWidget(tk.Frame):
         self.canvas = tk.Canvas(self, width=1020, height=720)
         self.canvas.pack()
         # Add the square overlay
-        self.overlay_frame = tk.Frame(self.canvas, width=200, height=200)
-        self.overlay_frame.place(x=700, y=500)
+        self.overlay_frame = tk.Frame(self.canvas, width=300, height=200)
+        self.overlay_frame.place(x=600, y=400)
         
         # Add the video frame
         self.video_frame = tk.Label(self.overlay_frame)
         self.video_frame.pack()
         self.cap_esp = None
-        self.url_camesp = 'http://192.168.0.104/live'
+        self.url_camesp = 'http://192.168.43.246/live'
 
         self.pack()
         self.mp_drawing = mp.solutions.drawing_utils
